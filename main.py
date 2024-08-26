@@ -1,5 +1,5 @@
 import torch
-from utils import MyDataLoader, disc_loss, gen_loss, gradient_penalty, save_discriminator, save_generator, save_images
+from utils import MyDataLoader, train_generator, train_discriminator
 from model import GraphGenerator, Discriminator
 import numpy as np
 from tqdm import tqdm
@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 
 dataloader = MyDataLoader(filepath='../../tox21.csv')
 df = dataloader.load()
-adj, feat, atom_mapping, bond_mapping = dataloader.preprocess(df, 25, 'smiles')
+adj, feat, atom_mapping, bond_mapping = dataloader.preprocess(df, 20, 'smiles')
 
-BATCH_SIZE = 64
-EPOCHS = 200
+BATCH_SIZE = 128
+EPOCHS = 300
 DROPOUT_RATE = 0.2
 LATENT_DIM = 64
 BOND_DIM = adj.shape[1]
@@ -25,48 +25,30 @@ generator = GraphGenerator(
 ).to(device)
 
 discriminator = Discriminator(
-    [(128, 128), 128], [128, 1], ATOM_DIM, BOND_DIM, DROPOUT_RATE
+    [(128, 128), 512], [512, 1], ATOM_DIM, BOND_DIM, DROPOUT_RATE
 ).to(device)
 
-optimizer_gen = torch.optim.Adam(params=generator.parameters(), lr=2e-4, betas=(0.5, 0.999))
-optimizer_disc = torch.optim.Adam(params=discriminator.parameters(), lr=2e-4, betas=(0.5, 0.999))
+optimizer_gen = torch.optim.Adam(params=generator.parameters(), lr=3e-4, betas=(0.5, 0.999))
+optimizer_disc = torch.optim.Adam(params=discriminator.parameters(), lr=3e-4, betas=(0.5, 0.999))
 
 adj_tensor, feat_tensor = dataloader.train_batch(adj, feat, BATCH_SIZE)
 def main():
     indices = torch.arange(0, adj_tensor.shape[0], 1)
     disc_steps = 5
-    generator.train()
-    discriminator.train()
     history = np.zeros((EPOCHS, 2))
     for epoch in tqdm(range(EPOCHS)):
         gen_running = 0
         disc_running = 0
         for idx in indices:
             graph_real = [adj_tensor[idx].to(device), feat_tensor[idx].to(device)]
-
             for _ in range(disc_steps):
                 z = torch.normal(mean=0, std=1, size=(BATCH_SIZE, LATENT_DIM), device=device)
-                with torch.no_grad():
-                    graph_fake = generator(z)
-                real_logits = discriminator(graph_real)
-                fake_logits = discriminator(graph_fake)
-                penalty = gradient_penalty(graph_real, graph_fake, BATCH_SIZE, discriminator)
-                d_loss = disc_loss(real_logits, fake_logits, penalty)
-
-                optimizer_disc.zero_grad()
-                d_loss.backward(retain_graph=True)
-                optimizer_disc.step()
-
-                disc_running += d_loss.item()
+                d_loss = train_discriminator(graph_real, generator, discriminator, z, BATCH_SIZE, optimizer_disc)
+                disc_running += d_loss
 
             z = torch.normal(mean=0, std=1, size=(BATCH_SIZE, LATENT_DIM), device=device)
-            graph_fake = generator(z)
-            fake_logits = discriminator(graph_fake)
-            g_loss = gen_loss(fake_logits)
-            optimizer_gen.zero_grad()
-            g_loss.backward()
-            optimizer_gen.step()
-            gen_running += g_loss.item()
+            g_loss = train_generator(generator, discriminator, z, optimizer_gen)
+            gen_running += g_loss
 
         if (epoch % 10 == 0) or (epoch == EPOCHS - 1):
             avg_gen = gen_running / len(indices)
@@ -79,6 +61,7 @@ def main():
             # save_images(generator, BATCH_SIZE, LATENT_DIM, image_path, atom_mapping, bond_mapping)
         history[epoch] = avg_gen, avg_disc
         indices = dataloader.shuffle_index(len(indices))
+
     fig, ax = plt.subplots(figsize=(10, 8))
     ax.plot(history[:, 0], '-', label='Generator')
     ax.plot(history[:, 1], '-', label='Discriminator')
@@ -86,8 +69,8 @@ def main():
         xlabel='Epochs',
         ylabel='Loss',
         xlim=[0, EPOCHS],
-        ylim=[-15, 15]
+        ylim=[history[:, 1].min(), history[:, 1].max()]
     )
-    plt.savefig(f'fig.history.{25}.{EPOCHS}.pdf')
+    plt.savefig(f'fig.history.{20}.{EPOCHS}.pdf')
 if __name__ == "__main__":
     main()

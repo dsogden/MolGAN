@@ -95,20 +95,28 @@ def disc_loss(real_logits, fake_logits, penalty):
 def gen_loss(fake_logits):
     return -torch.mean(fake_logits)
 
-def train_discriminator(graph_real, generator, discriminator, z, batch_size):
+def train_discriminator(graph_real, generator, discriminator, z, batch_size, optimizer):
+    discriminator.train()
     with torch.no_grad():
         graph_fake = generator(z)
     real_logits = discriminator(graph_real)
     fake_logits = discriminator(graph_fake)
     penalty = gradient_penalty(graph_real, graph_fake, batch_size, discriminator)
     d_loss = disc_loss(real_logits, fake_logits, penalty)
-    return d_loss
+    d_loss.backward(retain_graph=True)
+    optimizer.step()
+    optimizer.zero_grad()
+    return d_loss.item()
 
-def train_generator(generator, discriminator, z):
+def train_generator(generator, discriminator, z, optimizer):
+    generator.train()
     graph_fake = generator(z)
     fake_logits = discriminator(graph_fake)
     g_loss = gen_loss(fake_logits)
-    return g_loss
+    g_loss.backward()
+    optimizer.step()
+    optimizer.zero_grad()
+    return g_loss.item()
 
 def save_discriminator(epoch, path, model, optimizer, loss):
     torch.save({
