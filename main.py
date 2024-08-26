@@ -3,6 +3,7 @@ from utils import MyDataLoader, disc_loss, gen_loss, gradient_penalty, save_disc
 from model import GraphGenerator, Discriminator
 from tqdm import tqdm
 
+# Adding a line of text
 generator_path = 'model.001/generator.pt'
 discriminator_path = 'model.001/discriminator.pt'
 
