@@ -84,9 +84,10 @@ class MultiGraphConv(nn.Module):
 
     def forward(self, inputs):
         outputs = self.first_conv(inputs)
-        for layer in self.convs:
-            outputs = layer(outputs)
-        return outputs[-1]
+        return outputs
+        # for layer in self.convs:
+        #     outputs = layer(outputs)
+        # return outputs[-1]
 
 class GraphAggregation(nn.Module):
     def __init__(self, units, hidden_dim, dropout_rate):
@@ -125,9 +126,11 @@ class Discriminator(nn.Module):
         self.tanh = nn.Tanh()
         self.dropout = nn.Dropout(self.dropout_rate)
 
-    def forward(self, inputs):
+    def forward(self, adjacency, features):
+        inputs = [adjacency, features]
         hidden = self.gconv(inputs)
-        aggregation = self.aggregation(hidden)
-        linear = self.dropout(self.tanh(self.linear(aggregation)))
-        output = self.output(linear)
-        return output
+        return hidden
+        # aggregation = self.aggregation(hidden)
+        # linear = self.dropout(self.tanh(self.linear(aggregation)))
+        # output = self.output(linear)
+        # return output
