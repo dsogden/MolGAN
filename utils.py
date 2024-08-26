@@ -5,6 +5,8 @@ import rdkit
 from rdkit import Chem
 from rdkit.Chem.Draw import MolsToGridImage, MolToImageFile
 from smiles import smiles_to_graph, graph_to_molecule
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
 
 class MyDataLoader:
     def __init__(self, filepath):
@@ -67,7 +69,7 @@ class MyDataLoader:
         return indices
 
 def gradient_penalty(graph_real, graph_fake, batch_size, discriminator):
-    alpha = torch.rand(size=(batch_size, )).view(batch_size, 1, 1, 1)
+    alpha = torch.rand(size=(batch_size, ), device=device).view(batch_size, 1, 1, 1)
     adjacency_real, feature_real = graph_real
     adjacency_fake, feature_fake = graph_fake
     adjacency_interp = ((adjacency_real * alpha) + (1 - alpha) * adjacency_fake).requires_grad_(True)
@@ -79,7 +81,7 @@ def gradient_penalty(graph_real, graph_fake, batch_size, discriminator):
     gradients = torch.autograd.grad(
         outputs=output,
         inputs=graph_interp,
-        grad_outputs=torch.ones(output.size()),
+        grad_outputs=torch.ones(output.size(), device=device),
         create_graph=True, retain_graph=True
     )
 

@@ -1,16 +1,11 @@
 import torch
 from utils import MyDataLoader, disc_loss, gen_loss, gradient_penalty, save_discriminator, save_generator, save_images
 from model import GraphGenerator, Discriminator
+import numpy as np
 from tqdm import tqdm
-
-# Adding a line of text
-generator_path = 'model.001/generator.pt'
-discriminator_path = 'model.001/discriminator.pt'
-
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-# device = torch.device('cpu')
-# print(torch.cuda.is_available())
-print(device)
+# generator_path = 'model.001/generator.pt'
+# discriminator_path = 'model.001/discriminator.pt'
 
 dataloader = MyDataLoader(filepath='../../tox21.csv')
 df = dataloader.load()
@@ -41,7 +36,7 @@ def main():
     disc_steps = 5
     generator.train()
     discriminator.train()
-
+    history = np.zeros
     for epoch in tqdm(range(EPOCHS)):
         gen_running = 0
         disc_running = 0
@@ -73,15 +68,15 @@ def main():
             gen_running += g_loss.item()
 
         if (epoch % 10 == 0) or (epoch == EPOCHS - 1):
-            save_generator(epoch, generator_path, generator, optimizer_gen, g_loss)
-            save_discriminator(epoch, discriminator_path, discriminator, optimizer_disc, d_loss)
-            image_path = f'model.001/images/epoch.{epoch}'
-            save_images(generator, BATCH_SIZE, LATENT_DIM, image_path, atom_mapping, bond_mapping)
+            avg_gen = gen_running / len(indices)
+            avg_disc = (disc_running / disc_steps) / len(indices)
 
-        avg_gen = gen_running / len(indices)
-        avg_disc = (disc_running / disc_steps) / len(indices)
+            print(f'Discriminator Loss: {avg_disc}, Generator Loss: {avg_gen}')
+            # save_generator(epoch, generator_path, generator, optimizer_gen, g_loss)
+            # save_discriminator(epoch, discriminator_path, discriminator, optimizer_disc, d_loss)
+            # image_path = f'model.001/images/epoch.{epoch}'
+            # save_images(generator, BATCH_SIZE, LATENT_DIM, image_path, atom_mapping, bond_mapping)
 
-        print(f'Discriminator Loss: {avg_disc}, Generator Loss: {avg_gen}')
         indices = dataloader.shuffle_index(len(indices))
         
 if __name__ == "__main__":
