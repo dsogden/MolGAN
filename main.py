@@ -4,14 +4,15 @@ from model import GraphGenerator, Discriminator
 import numpy as np
 from tqdm import tqdm
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+import matplotlib.pyplot as plt
 # generator_path = 'model.001/generator.pt'
 # discriminator_path = 'model.001/discriminator.pt'
 
 dataloader = MyDataLoader(filepath='../../tox21.csv')
 df = dataloader.load()
-adj, feat, atom_mapping, bond_mapping = dataloader.preprocess(df, 10, 'smiles')
+adj, feat, atom_mapping, bond_mapping = dataloader.preprocess(df, 25, 'smiles')
 
-BATCH_SIZE = 32
+BATCH_SIZE = 64
 EPOCHS = 200
 DROPOUT_RATE = 0.2
 LATENT_DIM = 64
@@ -36,7 +37,7 @@ def main():
     disc_steps = 5
     generator.train()
     discriminator.train()
-    history = np.zeros
+    history = np.zeros((EPOCHS, 2))
     for epoch in tqdm(range(EPOCHS)):
         gen_running = 0
         disc_running = 0
@@ -76,8 +77,17 @@ def main():
             # save_discriminator(epoch, discriminator_path, discriminator, optimizer_disc, d_loss)
             # image_path = f'model.001/images/epoch.{epoch}'
             # save_images(generator, BATCH_SIZE, LATENT_DIM, image_path, atom_mapping, bond_mapping)
-
+        history[epoch] = avg_gen, avg_disc
         indices = dataloader.shuffle_index(len(indices))
-        
+    fig, ax = plt.subplots(figsize=(10, 8))
+    ax.plot(history[:, 0], '-', label='Generator')
+    ax.plot(history[:, 1], '-', label='Discriminator')
+    ax.set(
+        xlabel='Epochs',
+        ylabel='Loss',
+        xlim=[0, EPOCHS],
+        ylim=[-15, 15]
+    )
+    plt.savefig(f'fig.history.{25}.{EPOCHS}.pdf')
 if __name__ == "__main__":
     main()
