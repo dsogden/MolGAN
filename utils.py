@@ -119,20 +119,22 @@ def train_generator(generator, discriminator, z, optimizer):
     return g_loss.item()
 
 def save_discriminator(epoch, path, model, optimizer, loss):
-    torch.save({
+    torch.save(
+        {
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-            }, path)
+        }, path)
 
 def save_generator(epoch, path, model, optimizer, loss):
-    torch.save({
+    torch.save(
+        {
             'epoch': epoch,
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'loss': loss,
-            }, path)
+        }, path)
 
 def sample(generator, batch_size, latent_dim, atom_mapping, bond_mapping):
     z = torch.normal(0, 1, size=(batch_size, latent_dim))
